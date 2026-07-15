@@ -1,0 +1,7 @@
+datasets>=3.6.0        # audio, image, text
+tqdm>=4.67.1           # audio, image, text
+aiohttp>=3.13.0        # audio, image
+librosa>=0.11.0        # audio
+soundfile>=0.14.0      # audio
+numpy>=1.26.0,<2.0     # audio
+aiofiles>=25.1.0       # image

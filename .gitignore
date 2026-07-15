@@ -1,3 +1,15 @@
+# Custom
+*.whl
+.omc
+*_files
+calibset*
+mblt
+mxq
+private
+check.sh
+venv*
+spinWeight
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
