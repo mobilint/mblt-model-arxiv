@@ -1,0 +1,6 @@
+numpy>=1.26.0
+torch>=2.7.1
+# LlamaSdpaAttention, which transformers removed in 4.48 (attention unification).
+# 4.47.1 is the last version with it. Do NOT bump past 4.47.x.
+transformers==4.47.1
+tqdm>=4.67.1
