@@ -1,0 +1,7 @@
+numpy>=1.26.0
+torch>=2.7.1
+# Qwen3 architecture support landed in transformers 4.51.0; venv-qwen ships 4.57.1.
+# prepare_calibset.py only uses the tokenizer + embedding layer (no qbcompiler),
+# so it is not tied to the 4.47.1 pin the Llama-3.2 two-step compile needs.
+transformers>=4.51.0
+tqdm>=4.67.1
