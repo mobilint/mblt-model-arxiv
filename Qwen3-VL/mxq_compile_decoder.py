@@ -24,7 +24,11 @@ from qwen_vl_utils import process_vision_info
 from safetensors.torch import save_file
 from transformers import AutoProcessor
 
-MODEL_IDS = ["Qwen/Qwen3-VL-2B-Instruct"]
+MODEL_IDS = [
+    "Qwen/Qwen3-VL-2B-Instruct",
+    "Qwen/Qwen3-VL-4B-Instruct",
+    "Qwen/Qwen3-VL-8B-Instruct",
+]
 TARGET_DEVICES = ["aries-rb", "regulus-rb"]
 IMAGE_URL = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg?download=true"
 EMBED_TOKENS_KEY = "model.language_model.embed_tokens.weight"
@@ -203,27 +207,27 @@ def main():
         output_meta={"type": "list", "keys": [0]},
     )
 
-    # mxq_path = bundle_dir / f"{config_name}.mxq"
-    # print(f"[2/3] mxq_compile -> {mxq_path} (config: {config_name})")
-    # mxq_compile(
-    #     model=mblt_path,
-    #     target_device=args.target_device,
-    #     save_path=str(mxq_path),
-    #     calib_data_path=calib_data_path,
-    #     device=device,
-    #     inference_scheme=get_device_inference_scheme(args.target_device),
-    #     **load_configs(args.config),
-    # )
+    mxq_path = bundle_dir / f"{config_name}.mxq"
+    print(f"[2/3] mxq_compile -> {mxq_path} (config: {config_name})")
+    mxq_compile(
+        model=mblt_path,
+        target_device=args.target_device,
+        save_path=str(mxq_path),
+        calib_data_path=calib_data_path,
+        device=device,
+        inference_scheme=get_device_inference_scheme(args.target_device),
+        **load_configs(args.config),
+    )
 
-    # # SpinR1 (generated above) is keyed by the mblt stem; the encoder MXQ reuses it.
-    # rotation_path = f"./spinWeight/{name}_decoder/R1/global_rotation.pth"
-    # emb_path = bundle_dir / "model.safetensors"
-    # if os.path.isfile(rotation_path):
-    #     print(f"[3/3] rotate embeddings -> {emb_path}")
-    #     rotate_embeddings(model, rotation_path, str(emb_path))
-    # else:
-    #     print(f"[3/3] no R1 rotation at {rotation_path}; skip embedding rotation")
-    # print(f"Done: {bundle_dir}  (SpinR1: ./spinWeight/{name}_decoder/R1/)")
+    # SpinR1 (generated above) is keyed by the mblt stem; the encoder MXQ reuses it.
+    rotation_path = f"./spinWeight/{name}_decoder/R1/global_rotation.pth"
+    emb_path = bundle_dir / "model.safetensors"
+    if os.path.isfile(rotation_path):
+        print(f"[3/3] rotate embeddings -> {emb_path}")
+        rotate_embeddings(model, rotation_path, str(emb_path))
+    else:
+        print(f"[3/3] no R1 rotation at {rotation_path}; skip embedding rotation")
+    print(f"Done: {bundle_dir}  (SpinR1: ./spinWeight/{name}_decoder/R1/)")
 
 
 if __name__ == "__main__":

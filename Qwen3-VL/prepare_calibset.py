@@ -15,7 +15,11 @@ from qbcompiler.model_dict.parser.backend.hf.util import (
 from PIL import Image
 from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
 
-MODEL_IDS = ["Qwen/Qwen3-VL-2B-Instruct"]
+MODEL_IDS = [
+    "Qwen/Qwen3-VL-2B-Instruct",
+    "Qwen/Qwen3-VL-4B-Instruct",
+    "Qwen/Qwen3-VL-8B-Instruct",
+]
 IMAGES_DIR = "../image_files"  # shared MS COCO images from repo-root download_image_data.py
 IMAGE_SIZE = (224, 224)
 
@@ -246,7 +250,7 @@ def main():
     args = parser.parse_args()
 
     name = args.model.split("/")[-1]
-    output_dir = f"./calibset_{name}"  # model-inferred, like Qwen3/Llama
+    output_dir = f"./calibset_{name}"
 
     print(f"Loading {args.model} ...")
     model = Qwen3VLForConditionalGeneration.from_pretrained(args.model, dtype=torch.float32, device_map="auto")

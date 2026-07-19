@@ -25,8 +25,12 @@ from qbcompiler.model_dict.serialize import ChainedByteObj, SerializeMeta
 from qwen_vl_utils import process_vision_info
 from transformers import AutoProcessor
 
-MODEL_IDS = ["Qwen/Qwen3-VL-2B-Instruct"]
-TARGET_DEVICES = ["regulus-ra", "aries-rb", "regulus-rb"]
+MODEL_IDS = [
+    "Qwen/Qwen3-VL-2B-Instruct",
+    "Qwen/Qwen3-VL-4B-Instruct",
+    "Qwen/Qwen3-VL-8B-Instruct",
+]
+TARGET_DEVICES = ["aries-rb", "regulus-rb"]
 IMAGE_URL = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg?download=true"
 
 
@@ -97,8 +101,9 @@ def set_input_constants_nhwc(model_dict):
                 subgraph.activations[op.options.outputs[0]].dataformat = DataFormat.NHWC
 
 
-def build_vision_feed_dict(model, processor, image_size):
-    """Capture one sample image's vision inputs and wrap them as the parser feed_dict."""
+def build_feed_dict(model, processor, image_size):
+    """Capture one sample image's vision inputs and wrap them as the parser feed_dict.
+    Returns (feed_dict, grid_thw); grid_thw is consumed by build_vision_model()."""
     messages = [{"role": "user", "content": [
         {"type": "image", "image": IMAGE_URL},
         {"type": "text", "text": "Describe this image in detail."},
@@ -108,12 +113,16 @@ def build_vision_feed_dict(model, processor, image_size):
     pixel_values, grid_thw = capture_vision_inputs(model, inputs)
     images = repreprocess_pixel_values(pixel_values, grid_thw[0])
 
+    feed_dict = {"images": wrap_tensor("images", images.to(model.device))}
+    return feed_dict, grid_thw
+
+
+def build_vision_model(model, grid_thw):
+    """Build the compilable vision encoder module bound to the captured grid_thw."""
     vision_model = VisionModelForQwen3VL(model.model)
     vision_model.set_grid_thw(grid_thw.to(model.device))
     vision_model.to(model.device)
-
-    feed_dict = {"images": wrap_tensor("images", images.to(model.device))}
-    return vision_model, feed_dict
+    return vision_model
 
 
 def tmp_mblt_compile(vision_model, feed_dict, target_device, mblt_path):
@@ -131,11 +140,11 @@ def tmp_mblt_compile(vision_model, feed_dict, target_device, mblt_path):
     serialize_to_mblt(model_dict, weight_dict, mblt_path)
 
 
-def load_configs(config_path):
+def load_configs(config_path, **kwargs):
     spec = importlib.util.spec_from_file_location("mxq_config", config_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.get_configs()
+    return module.get_configs(**kwargs)
 
 
 def get_device_inference_scheme(target_device):
@@ -155,6 +164,9 @@ def parse_args():
     parser.add_argument("--mblt-path", help="output .mblt path (default: ./mblt/{name}_encoder.mblt)")
     parser.add_argument("--out-dir", default="./mxq", help="bundle root; outputs go to {out-dir}/{config-name}/")
     parser.add_argument("--image-size", type=int, nargs=2, default=[224, 224])
+    parser.add_argument("--rotation-matrix-path", default=None,
+                        help="decoder SpinR1 path consumed by head_out_ch_rotation "
+                             "(default: ./spinWeight/{model}_decoder/R1/global_rotation.pth)")
     return parser.parse_args()
 
 
@@ -166,24 +178,26 @@ def main():
 
     print(f"[1/2] build encoder mblt -> {mblt_path}")
     model, processor = load_model_and_processor(args.model)
-    vision_model, feed_dict = build_vision_feed_dict(model, processor, args.image_size)
+    feed_dict, grid_thw = build_feed_dict(model, processor, args.image_size)
+    vision_model = build_vision_model(model, grid_thw)
     tmp_mblt_compile(vision_model, feed_dict, args.target_device, mblt_path)
 
     # [2/2] mxq (consumes the decoder's SpinR1 via head_out_ch_rotation; run decoder first):
-    # config_name = Path(args.config).stem
-    # bundle_dir = Path(args.out_dir) / config_name
-    # bundle_dir.mkdir(parents=True, exist_ok=True)
-    # mxq_path = bundle_dir / f"{config_name}.mxq"
-    # mxq_compile(
-    #     model=mblt_path,
-    #     target_device=args.target_device,
-    #     save_path=str(mxq_path),
-    #     calib_data_path=f"./calibset_{name}/vision/npy_files.txt",
-    #     device="gpu" if torch.cuda.is_available() else "cpu",
-    #     inference_scheme=get_device_inference_scheme(args.target_device),
-    #     **load_configs(args.config),
-    # )
-    # print(f"Done: {mxq_path}")
+    config_name = Path(args.config).stem
+    bundle_dir = Path(args.out_dir) / config_name
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    mxq_path = bundle_dir / f"{config_name}.mxq"
+    rotation_matrix_path = args.rotation_matrix_path or f"./spinWeight/{name}_decoder/R1/global_rotation.pth"
+    mxq_compile(
+        model=mblt_path,
+        target_device=args.target_device,
+        save_path=str(mxq_path),
+        calib_data_path=f"./calibset_{name}/vision/npy_files.txt",
+        device="gpu" if torch.cuda.is_available() else "cpu",
+        inference_scheme=get_device_inference_scheme(args.target_device),
+        **load_configs(args.config, rotation_matrix_path=rotation_matrix_path),
+    )
+    print(f"Done: {mxq_path}")
 
 
 if __name__ == "__main__":

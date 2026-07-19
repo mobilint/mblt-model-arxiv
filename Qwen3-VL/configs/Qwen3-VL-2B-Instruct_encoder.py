@@ -6,12 +6,11 @@ from qbcompiler import (
     ResourceManagementConfig,
 )
 
-# The decoder MXQ compile generates this SpinR1 matrix; the encoder consumes it via
-# head_out_ch_rotation. mmc keys spinWeight by the decoder mblt stem (..._decoder).
-ROTATION_MATRIX_PATH = "./spinWeight/Qwen3-VL-2B-Instruct_decoder/R1/global_rotation.pth"
 
-
-def get_configs() -> dict:
+def get_configs(rotation_matrix_path) -> dict:
+    # rotation_matrix_path: the decoder's SpinR1 matrix, consumed via head_out_ch_rotation.
+    # Supplied by mxq_compile_encoder.py (derived from --model, or --rotation-matrix-path),
+    # so it is not hardcoded here. Run the decoder first to produce it.
     return {
         "calibration_config": CalibrationConfig(output=0, mode=1),
 
@@ -45,7 +44,7 @@ def get_configs() -> dict:
             vo=EquivalentTransformationConfig.Vo(apply=True),
             head_out_ch_rotation=EquivalentTransformationConfig.HeadOutChRotation(
                 apply=True,
-                matrix_path=ROTATION_MATRIX_PATH,
+                matrix_path=rotation_matrix_path,
             ),
             spin_r1=EquivalentTransformationConfig.SpinR1(apply=False),
             spin_r2=EquivalentTransformationConfig.SpinR2(apply=True),
