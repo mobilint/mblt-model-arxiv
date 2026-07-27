@@ -1,0 +1,43 @@
+quantization:
+  calibration:
+    mode: 0
+  bit:
+    transformer:
+      weight:
+        query: 4
+        key: 4
+        value: 8
+        output: 4
+        ffn: 4
+        head: 4
+advancedQuantization:
+  EquivalentTransformation:
+    QK:
+      apply: true
+    SpinR1:
+      apply: true
+    SpinR2:
+      apply: true
+    QKRotation:
+      apply: true
+    OptimizeFFN:
+      apply: true
+  searchWeightScale:
+    apply: true
+    transformer:
+      query: true
+      key: true
+      value: true
+      out: true
+      ffn: true
+llm:
+  apply: true
+  attributes:
+    maxDataLength: 256
+    maxSequenceLength: 4096
+    maxCacheLength: 4096
+    maxCoreDataLength: 256
+    calibration:
+      useFullSeqLength: true
+resourceManagement:
+  weightDtype: float16

@@ -143,6 +143,9 @@ def build_compilable_model(model, position_ids):
 
 
 def load_configs(config_path):
+    # .yaml/.yml: qbcompiler loads it as one CompileConfig; .py: get_configs() kwargs
+    if config_path.endswith((".yaml", ".yml")):
+        return {"compile_config": config_path}
     spec = importlib.util.spec_from_file_location("mxq_config", config_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

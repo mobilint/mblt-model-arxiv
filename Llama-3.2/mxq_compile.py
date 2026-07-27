@@ -50,7 +50,9 @@ def get_device_inference_scheme(target_device):
 
 
 def load_configs(config_path):
-    """Import a quantization config .py by path and return its mxq_compile config kwargs."""
+    """Return mxq_compile config kwargs: .yaml/.yml as one CompileConfig, .py via get_configs()."""
+    if config_path.endswith((".yaml", ".yml")):
+        return {"compile_config": config_path}
     spec = importlib.util.spec_from_file_location("mxq_config", config_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

@@ -54,7 +54,9 @@ def build_feed_dict(model, tokenizer, device):
 
 
 def load_configs(config_path):
-    # import the config .py by path and return its mxq_compile kwargs (get_configs())
+    # .yaml/.yml: qbcompiler loads it as one CompileConfig; .py: get_configs() kwargs
+    if config_path.endswith((".yaml", ".yml")):
+        return {"compile_config": config_path}
     spec = importlib.util.spec_from_file_location("mxq_config", config_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

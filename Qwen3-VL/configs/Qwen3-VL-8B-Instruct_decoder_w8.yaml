@@ -1,0 +1,46 @@
+quantization:
+  calibration:
+    mode: 0
+  bit:
+    transformer:
+      weight:
+        query: 8
+        key: 8
+        value: 8
+        output: 8
+        ffn: 8
+        head: 8
+    layerOverrides:
+      activation16Bits:
+      - inputs_embeds/reshape
+      - deepstack_visual_embeds_0
+advancedQuantization:
+  EquivalentTransformation:
+    NormConv:
+      apply: true
+    QK:
+      apply: true
+    UD:
+      apply: true
+    VO:
+      apply: true
+    SpinR1:
+      apply: true
+    SpinR2:
+      apply: true
+    QKRotation:
+      apply: true
+    FlattenQuant:
+      apply: true
+    OptimizeFFN:
+      apply: true
+llm:
+  apply: true
+  attributes:
+    maxSequenceLength: 4096
+    maxCacheLength: 4096
+    calibration:
+      useFullSeqLength: true
+resourceManagement:
+  weightMemory:
+    method: 1

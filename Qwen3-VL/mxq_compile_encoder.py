@@ -141,6 +141,10 @@ def tmp_mblt_compile(vision_model, feed_dict, target_device, mblt_path):
 
 
 def load_configs(config_path, **kwargs):
+    # .yaml/.yml: one CompileConfig with the rotation matrix_path already baked in,
+    # so --rotation-matrix-path only applies to the .py config.
+    if config_path.endswith((".yaml", ".yml")):
+        return {"compile_config": config_path}
     spec = importlib.util.spec_from_file_location("mxq_config", config_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
