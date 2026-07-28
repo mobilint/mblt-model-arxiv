@@ -10,6 +10,8 @@ check.sh
 venv*
 spinWeight
 .vscode
+# Quantization configs ship as YAML; the .py sources stay local-only.
+**/configs/*.py
 template
 
 # Byte-compiled / optimized / DLL files

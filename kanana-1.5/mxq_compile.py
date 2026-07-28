@@ -1,4 +1,3 @@
-import importlib.util
 import os
 import shutil
 from argparse import ArgumentParser
@@ -59,16 +58,6 @@ def build_feed_dict(model, tokenizer, device):
     return feed_dict
 
 
-def load_configs(config_path):
-    # .yaml/.yml: qbcompiler loads it as one CompileConfig; .py: get_configs() kwargs
-    if config_path.endswith((".yaml", ".yml")):
-        return {"compile_config": config_path}
-    spec = importlib.util.spec_from_file_location("mxq_config", config_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.get_configs()
-
-
 def get_device_inference_scheme(target_device):
     # REGULUS supports only the single scheme; ARIES supports all schemes in one model.
     # Recipe default is batch_size=1 -> "all"; use "single" when compiling for batch > 1.
@@ -113,7 +102,7 @@ def parse_args():
     parser = ArgumentParser(description="kanana-1.5 compile: mblt_compile (torch/fx) -> mxq_compile")
     parser.add_argument("--model", required=True, choices=MODEL_IDS)
     parser.add_argument("--target-device", required=True, choices=["regulus-rb", "aries-rb"])
-    parser.add_argument("--config", required=True, help="quantization config path (.py or .yaml), e.g. ./configs/kanana-1.5-2.1b-instruct-2505_w8.yaml")
+    parser.add_argument("--config", required=True, help="quantization config path, e.g. ./configs/kanana-1.5-2.1b-instruct-2505_w8.yaml")
     parser.add_argument("--mblt-path", help="output .mblt path (default: ./mblt/{model}.mblt)")
     parser.add_argument("--out-dir", default="./mxq", help="bundle root; outputs go to {out-dir}/{config-name}/")
     return parser.parse_args()
@@ -153,7 +142,7 @@ def main():
         save_path=str(mxq_path),
         device=device,
         inference_scheme=get_device_inference_scheme(args.target_device),
-        **load_configs(args.config),
+        compile_config=args.config,
     )
 
     bundle_spin_weights(model, name, config_name, bundle_dir)

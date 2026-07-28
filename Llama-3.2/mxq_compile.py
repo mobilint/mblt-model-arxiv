@@ -7,7 +7,6 @@ feed_dict. Calibration data is passed as a single manifest .json (a list of dirs
 read as one-per-model and fails the count check).
 """
 
-import importlib.util
 import os
 import shutil
 from argparse import ArgumentParser
@@ -49,16 +48,6 @@ def get_device_inference_scheme(target_device):
     raise ValueError(f"{target_device} not supported")
 
 
-def load_configs(config_path):
-    """Return mxq_compile config kwargs: .yaml/.yml as one CompileConfig, .py via get_configs()."""
-    if config_path.endswith((".yaml", ".yml")):
-        return {"compile_config": config_path}
-    spec = importlib.util.spec_from_file_location("mxq_config", config_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.get_configs()
-
-
 def rotate_embeddings(model, rotation_path, save_path):
     # rotated input embedding = emb @ R1 rotation; global_rotation.pth is a TorchScript archive
     emb = model.get_input_embeddings().weight.detach().cpu()
@@ -93,7 +82,7 @@ def parse_args():
     parser = ArgumentParser(description="Compile Llama: mblt_compile -> mxq_compile")
     parser.add_argument("--model", required=True, choices=MODEL_IDS, help="model id to compile")
     parser.add_argument("--target-device", required=True, choices=["regulus-rb", "aries-rb"])
-    parser.add_argument("--config", required=True, help="quantization config path, e.g. ./configs/Llama-3.2-1B-Instruct_w8.py")
+    parser.add_argument("--config", required=True, help="quantization config path, e.g. ./configs/Llama-3.2-1B-Instruct_w8.yaml")
     parser.add_argument("--mblt-path", help="output .mblt path (default: ./mblt/{model}.mblt)")
     parser.add_argument("--out-dir", default="./mxq", help="bundle root; outputs go to {out-dir}/{config-name}/")
     return parser.parse_args()
@@ -130,7 +119,7 @@ def main():
         save_path=str(mxq_path),
         device=device,
         inference_scheme=get_device_inference_scheme(args.target_device),
-        **load_configs(args.config),
+        compile_config=args.config,
     )
 
     bundle_spin_weights(model, name, config_name, bundle_dir)

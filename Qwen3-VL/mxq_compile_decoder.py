@@ -1,5 +1,4 @@
 import argparse
-import importlib.util
 import os
 from pathlib import Path
 
@@ -142,16 +141,6 @@ def build_compilable_model(model, position_ids):
     return model.projection
 
 
-def load_configs(config_path):
-    # .yaml/.yml: qbcompiler loads it as one CompileConfig; .py: get_configs() kwargs
-    if config_path.endswith((".yaml", ".yml")):
-        return {"compile_config": config_path}
-    spec = importlib.util.spec_from_file_location("mxq_config", config_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.get_configs()
-
-
 def get_device_inference_scheme(target_device):
     # REGULUS supports only the single scheme; ARIES supports all schemes in one model.
     if "regulus" in target_device:
@@ -172,7 +161,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Qwen3-VL decoder: HF -> MBLT -> MXQ (generates SpinR1)")
     parser.add_argument("--model", required=True, choices=MODEL_IDS)
     parser.add_argument("--target-device", required=True, choices=TARGET_DEVICES)
-    parser.add_argument("--config", required=True, help="config path, e.g. ./configs/Qwen3-VL-2B-Instruct_decoder_w8.py")
+    parser.add_argument("--config", required=True, help="quantization config path, e.g. ./configs/Qwen3-VL-2B-Instruct_decoder_w8.yaml")
     parser.add_argument("--mblt-path", help="output .mblt path (default: ./mblt/{name}_decoder.mblt)")
     parser.add_argument("--out-dir", default="./mxq", help="bundle root; outputs go to {out-dir}/{config-name}/")
     return parser.parse_args()
@@ -219,7 +208,7 @@ def main():
         calib_data_path=calib_data_path,
         device=device,
         inference_scheme=get_device_inference_scheme(args.target_device),
-        **load_configs(args.config),
+        compile_config=args.config,
     )
 
     # SpinR1 (generated above) is keyed by the mblt stem; the encoder MXQ reuses it.

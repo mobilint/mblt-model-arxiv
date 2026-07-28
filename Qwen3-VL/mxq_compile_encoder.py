@@ -1,5 +1,4 @@
 import argparse
-import importlib.util
 import os
 from pathlib import Path
 
@@ -140,17 +139,6 @@ def tmp_mblt_compile(vision_model, feed_dict, target_device, mblt_path):
     serialize_to_mblt(model_dict, weight_dict, mblt_path)
 
 
-def load_configs(config_path, **kwargs):
-    # .yaml/.yml: one CompileConfig with the rotation matrix_path already baked in,
-    # so --rotation-matrix-path only applies to the .py config.
-    if config_path.endswith((".yaml", ".yml")):
-        return {"compile_config": config_path}
-    spec = importlib.util.spec_from_file_location("mxq_config", config_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.get_configs(**kwargs)
-
-
 def get_device_inference_scheme(target_device):
     # REGULUS supports only the single scheme; ARIES supports all schemes in one model.
     if "regulus" in target_device:
@@ -164,13 +152,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Qwen3-VL encoder: HF -> MBLT -> MXQ (consumes decoder SpinR1)")
     parser.add_argument("--model", required=True, choices=MODEL_IDS)
     parser.add_argument("--target-device", required=True, choices=TARGET_DEVICES)
-    parser.add_argument("--config", required=True, help="config path, e.g. ./configs/Qwen3-VL-2B-Instruct_encoder.py")
+    parser.add_argument("--config", required=True, help="quantization config path, e.g. ./configs/Qwen3-VL-2B-Instruct_encoder.yaml")
     parser.add_argument("--mblt-path", help="output .mblt path (default: ./mblt/{name}_encoder.mblt)")
     parser.add_argument("--out-dir", default="./mxq", help="bundle root; outputs go to {out-dir}/{config-name}/")
     parser.add_argument("--image-size", type=int, nargs=2, default=[224, 224])
-    parser.add_argument("--rotation-matrix-path", default=None,
-                        help="decoder SpinR1 path consumed by head_out_ch_rotation "
-                             "(default: ./spinWeight/{model}_decoder/R1/global_rotation.pth)")
     return parser.parse_args()
 
 
@@ -191,7 +176,6 @@ def main():
     bundle_dir = Path(args.out_dir) / config_name
     bundle_dir.mkdir(parents=True, exist_ok=True)
     mxq_path = bundle_dir / f"{config_name}.mxq"
-    rotation_matrix_path = args.rotation_matrix_path or f"./spinWeight/{name}_decoder/R1/global_rotation.pth"
     mxq_compile(
         model=mblt_path,
         target_device=args.target_device,
@@ -199,7 +183,7 @@ def main():
         calib_data_path=f"./calibset_{name}/vision/npy_files.txt",
         device="gpu" if torch.cuda.is_available() else "cpu",
         inference_scheme=get_device_inference_scheme(args.target_device),
-        **load_configs(args.config, rotation_matrix_path=rotation_matrix_path),
+        compile_config=args.config,
     )
     print(f"Done: {mxq_path}")
 
