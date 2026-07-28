@@ -1,0 +1,41 @@
+quantization:
+  bit:
+    transformer:
+      weight:
+        query: 8
+        key: 8
+        value: 8
+        output: 8
+        ffn: 8
+        head: 8
+    layerOverrides:
+      activation16Bits:
+      - model_merger_linear_fc2
+      - model_deepstack_merger_list_0_linear_fc2
+      - model_deepstack_merger_list_1_linear_fc2
+      - model_deepstack_merger_list_2_linear_fc2
+advancedQuantization:
+  EquivalentTransformation:
+    QK:
+      apply: true
+    UD:
+      apply: true
+    VO:
+      apply: true
+    HeadOutChRotation:
+      apply: true
+      matrixPath: ./spinWeight/Qwen3-VL-4B-Instruct_decoder/R1/global_rotation.pth
+    SpinR2:
+      apply: true
+    OptimizeFFN:
+      apply: true
+llm:
+  apply: true
+  attributes:
+    maxSequenceLength: 4096
+    maxCacheLength: 4096
+    calibration:
+      useFullSeqLength: true
+resourceManagement:
+  weightMemory:
+    method: 1

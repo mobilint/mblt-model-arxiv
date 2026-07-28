@@ -1,5 +1,3 @@
-import importlib.util
-import os
 import shutil
 from argparse import ArgumentParser
 from pathlib import Path
@@ -53,14 +51,6 @@ def build_feed_dict(model, tokenizer, device):
     return feed_dict
 
 
-def load_configs(config_path):
-    # import the config .py by path and return its mxq_compile kwargs (get_configs())
-    spec = importlib.util.spec_from_file_location("mxq_config", config_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.get_configs()
-
-
 def get_device_inference_scheme(target_device):
     # REGULUS supports only the single scheme; ARIES supports all schemes in one model.
     if "regulus" in target_device:
@@ -104,7 +94,7 @@ def parse_args():
     parser = ArgumentParser(description="Qwen3 compile: mblt_compile (torch/fx) -> mxq_compile")
     parser.add_argument("--model", required=True, choices=MODEL_IDS)
     parser.add_argument("--target-device", required=True, choices=["regulus-rb", "aries-rb"])
-    parser.add_argument("--config", required=True, help="quantization config path, e.g. ./configs/Qwen3-0.6B_w8.py")
+    parser.add_argument("--config", required=True, help="quantization config path, e.g. ./configs/Qwen3-0.6B_w8.yaml")
     parser.add_argument("--mblt-path", help="output .mblt path (default: ./mblt/{model}.mblt)")
     parser.add_argument("--out-dir", default="./mxq", help="bundle root; outputs go to {out-dir}/{config-name}/")
     return parser.parse_args()
@@ -117,7 +107,7 @@ def main():
     calib_data_path = f"./calibset_{name}/calib_files.json"  # single manifest (a dir list fails the count check)
     config_name = Path(args.config).stem  # e.g. Qwen3-0.6B_w8; names the mxq/spinWeight bundle
     bundle_dir = Path(args.out_dir) / config_name  # ./mxq/{config}/ : mxq + spinWeight + rotated embedding
-    os.makedirs(os.path.dirname(mblt_path), exist_ok=True)
+    Path(mblt_path).parent.mkdir(parents=True, exist_ok=True)
     bundle_dir.mkdir(parents=True, exist_ok=True)
 
     device = "gpu" if torch.cuda.is_available() else "cpu"
@@ -145,7 +135,7 @@ def main():
         save_path=str(mxq_path),
         device=device,
         inference_scheme=get_device_inference_scheme(args.target_device),
-        **load_configs(args.config),
+        compile_config=args.config,
     )
 
     bundle_spin_weights(model, name, config_name, bundle_dir)
