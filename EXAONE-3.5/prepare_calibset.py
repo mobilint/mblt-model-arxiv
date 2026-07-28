@@ -10,22 +10,21 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 TEXT_DIR = "../text_files"          # raw text from download_text_data.py (run from this model dir)
 
-# Selectable model ids. Both sizes share one tokenizer but have different
+# Selectable model ids. Sizes in a cluster share a tokenizer but have different
 # embeddings, so their calibsets (inputs_embeds) differ even from identical text.
 MODEL_IDS = [
     "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct",
     "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct",
 ]
 
-# Both repos moved their remote code to Transformers v5 in Feb 2026 (it imports
+# The repos moved their remote code to Transformers v5 in Feb 2026 (it imports
 # RopeParameters). Pin the last pre-v5 revision so it loads under transformers 4.x.
 REVISIONS = {
     "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct": "e949c91dec92095908d34e6b560af77dd0c993f8",
     "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct": "0ff6b5ec7c13b049b253a16a889aa269e6b79a94",
 }
 
-# Per-language calibration quota (recipe distribution: EXAONE-3.5 is en/ko only).
-# Scaled by --ratio.
+# Per-language calibration quota (recipe distribution). Scaled by --ratio.
 QUOTA = {
     "en": 50,
     "ko": 50,
@@ -37,9 +36,7 @@ MAX_SEQLEN = 2048
 
 def load_embedding_layer(model_id: str, device: str) -> torch.nn.Embedding:
     """Load `model_id` and return its input-embedding layer (float32); the rest of the model is freed."""
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id, dtype="auto", trust_remote_code=True, revision=REVISIONS[model_id]
-    )
+    model = AutoModelForCausalLM.from_pretrained(model_id, dtype="auto", trust_remote_code=True, revision=REVISIONS[model_id])
     weight = model.get_input_embeddings().weight.detach().float()
     del model
     if torch.cuda.is_available():
@@ -122,9 +119,7 @@ def main() -> None:
     model_id = args.model
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_id, trust_remote_code=True, revision=REVISIONS[model_id]
-    )
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, revision=REVISIONS[model_id])
     embedding_layer = load_embedding_layer(model_id, device)
 
     save_dir = f"./calibset_{model_id.split('/')[-1]}"

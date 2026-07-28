@@ -1,7 +1,5 @@
 numpy>=1.26.0
 torch>=2.7.1
-# EXAONE-3.5 ships as HF remote code (trust_remote_code=True). qbcompiler traces it
-# through the torch/fx backend, which patches the remote code via
-# fx_hf_extensions/transformers/remote_code/exaone.py.
+# Remote-code model: every load passes trust_remote_code=True.
 transformers>=4.51.0
 tqdm>=4.67.1

@@ -15,18 +15,25 @@ from qbcompiler.model_dict.parser.backend.hf.util import (
 from qbcompiler.model_dict.parser.backend.torch.object_wrapper import set_attention_mask
 from qbcompiler.model_dict.parser.backend.torch.util import wrap_tensor
 
-# EXAONE ships as HF remote code, so every load needs trust_remote_code=True.
 MODEL_IDS = [
     "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct",
     "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct",
 ]
 
-# Both repos moved their remote code to Transformers v5 in Feb 2026 (it imports
+# The repos moved their remote code to Transformers v5 in Feb 2026 (it imports
 # RopeParameters). Pin the last pre-v5 revision so it loads under transformers 4.x.
 REVISIONS = {
     "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct": "e949c91dec92095908d34e6b560af77dd0c993f8",
     "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct": "0ff6b5ec7c13b049b253a16a889aa269e6b79a94",
 }
+
+
+def load_model_and_tokenizer(model_id):
+    """Load the model on CPU in float32 (tracing runs on CPU) plus its tokenizer."""
+    revision = REVISIONS[model_id]
+    model = AutoModelForCausalLM.from_pretrained(model_id, trust_remote_code=True, revision=revision).eval().cpu()
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, revision=revision)
+    return model, tokenizer
 
 
 def build_feed_dict(model, tokenizer, device):
@@ -37,6 +44,7 @@ def build_feed_dict(model, tokenizer, device):
     inputs = tokenizer.apply_chat_template(
         chat, add_generation_prompt=True, return_dict=True, return_tensors="pt"
     )
+    inputs.pop("token_type_ids", None)  # some chat templates emit it; generate() rejects it
     container = DefaultInputsCaptureContainer()
     with InputCaptureCtxManager(model, max_call_limit=1, inputs_container=container):
         model.generate(**inputs, max_new_tokens=1, do_sample=False)
@@ -125,7 +133,7 @@ def main():
     name = args.model.split("/")[-1]
     mblt_path = args.mblt_path or f"./mblt/{name}.mblt"
     calib_data_path = f"./calibset_{name}/calib_files.json"  # single manifest (a dir list fails the count check)
-    config_name = Path(args.config).stem  # e.g. EXAONE-3.5-2.4B-Instruct_w8; names the mxq/spinWeight bundle
+    config_name = Path(args.config).stem  # names the mxq/spinWeight bundle
     bundle_dir = Path(args.out_dir) / config_name  # ./mxq/{config}/ : mxq + spinWeight + rotated embedding
     os.makedirs(os.path.dirname(mblt_path), exist_ok=True)
     bundle_dir.mkdir(parents=True, exist_ok=True)
@@ -133,11 +141,7 @@ def main():
     device = "gpu" if torch.cuda.is_available() else "cpu"
 
     print(f"[1/2] mblt_compile (torch) -> {mblt_path}")
-    revision = REVISIONS[args.model]
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model, trust_remote_code=True, revision=revision
-    ).eval().cpu()  # float32 for CPU tracing
-    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True, revision=revision)
+    model, tokenizer = load_model_and_tokenizer(args.model)
     feed_dict = build_feed_dict(model, tokenizer, device="cpu")
     mblt_compile(
         model=model,
