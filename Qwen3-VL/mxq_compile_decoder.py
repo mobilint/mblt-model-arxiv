@@ -174,7 +174,7 @@ def main():
     calib_data_path = f"./calibset_{name}/language/npy_files.json"
     config_name = Path(args.config).stem
     bundle_dir = Path(args.out_dir) / config_name
-    os.makedirs(os.path.dirname(mblt_path), exist_ok=True)
+    Path(mblt_path).parent.mkdir(parents=True, exist_ok=True)
     bundle_dir.mkdir(parents=True, exist_ok=True)
     device = "gpu" if torch.cuda.is_available() else "cpu"
 

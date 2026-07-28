@@ -83,6 +83,10 @@ def write_calib_manifest(save_dir: str) -> str:
     one-per-model and fails the count check); the manifest covers all languages.
     """
     npy_files = sorted(glob.glob(os.path.join(save_dir, "*", "*.npy")))
+    if not npy_files:
+        raise FileNotFoundError(
+            f"No calibration .npy under {save_dir}; check --ratio and the {MIN_SEQLEN}-token minimum"
+        )
     shape = list(np.load(npy_files[0], mmap_mode="r").shape)  # [1, seq_len, embed_dim]
     shape[1] = -1  # sequence length is dynamic
     manifest = os.path.join(save_dir, "calib_files.json")

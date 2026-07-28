@@ -1,4 +1,3 @@
-import os
 import shutil
 from argparse import ArgumentParser
 from pathlib import Path
@@ -108,7 +107,7 @@ def main():
     calib_data_path = f"./calibset_{name}/calib_files.json"  # single manifest (a dir list fails the count check)
     config_name = Path(args.config).stem  # e.g. Qwen3-0.6B_w8; names the mxq/spinWeight bundle
     bundle_dir = Path(args.out_dir) / config_name  # ./mxq/{config}/ : mxq + spinWeight + rotated embedding
-    os.makedirs(os.path.dirname(mblt_path), exist_ok=True)
+    Path(mblt_path).parent.mkdir(parents=True, exist_ok=True)
     bundle_dir.mkdir(parents=True, exist_ok=True)
 
     device = "gpu" if torch.cuda.is_available() else "cpu"

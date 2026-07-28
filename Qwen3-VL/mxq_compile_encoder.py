@@ -163,7 +163,7 @@ def main():
     args = parse_args()
     name = args.model.split("/")[-1]
     mblt_path = args.mblt_path or f"./mblt/{name}_encoder.mblt"
-    os.makedirs(os.path.dirname(mblt_path), exist_ok=True)
+    Path(mblt_path).parent.mkdir(parents=True, exist_ok=True)
 
     print(f"[1/2] build encoder mblt -> {mblt_path}")
     model, processor = load_model_and_processor(args.model)
