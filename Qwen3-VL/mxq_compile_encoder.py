@@ -1,26 +1,10 @@
 import argparse
-import os
 from pathlib import Path
 
 import torch
-from qbcompiler import mxq_compile
-from qbcompiler.model_dict.common import DataFormat, LayerType
-from qbcompiler.model_dict.parser.backend.fx_hf_extensions.transformers.models.qwen3vl import (
-    Projection,
-    Qwen3VL_get_image_features,
-    Qwen3VLForConditionalGenerationWrapper,
-    Qwen3VLModel_get_image_feature,
-    VisionModelForQwen3VL,
-    patched_deepstack_process,
-    repreprocess_pixel_values,
-)
-from qbcompiler.model_dict.parser.backend.hf.util import (
-    DefaultInputsCaptureContainer,
-    InputCaptureCtxManager,
-)
-from qbcompiler.model_dict.parser.backend.torch.util import wrap_tensor
-from qbcompiler.model_dict.parser.parser import ModelParser
-from qbcompiler.model_dict.serialize import ChainedByteObj, SerializeMeta
+from qbcompiler import mblt_compile, mxq_compile
+from qbcompiler.model_dict_new.parser.backend.torch.input_capture import capture_forward_inputs
+from qbcompiler.model_dict_new.parser.patcher.models.hf_models import qwen3vl
 from qwen_vl_utils import process_vision_info
 from transformers import AutoProcessor
 
@@ -36,19 +20,24 @@ IMAGE_URL = "https://huggingface.co/datasets/huggingface/documentation-images/re
 def load_model_and_processor(model_name):
     """Load a Qwen3-VL model (float32) and processor, patched for compilation."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = Qwen3VLForConditionalGenerationWrapper.from_pretrained(
-        model_name, device_map=device, torch_dtype=torch.float32
-    )
+
+    # get Mobilint's patched subclass
+    wrapper_cls = qwen3vl.ensure_qwen3vl_classes_loaded()
+    model = wrapper_cls.from_pretrained(model_name, dtype=torch.float32).to(device).eval()
     processor = AutoProcessor.from_pretrained(model_name)
 
+    # deepstack merge -> plain addition
     language_model = model.model.language_model
-    language_model._deepstack_process = patched_deepstack_process.__get__(
+    language_model._deepstack_process = qwen3vl.patched_deepstack_process.__get__(
         language_model, type(language_model)
     )
-    model.projection = Projection(language_model, model.lm_head)
 
-    model.model.get_image_feature_class = Qwen3VLModel_get_image_feature(model.model)
-    model.model.get_image_features = Qwen3VL_get_image_features.__get__(
+    # the compile unit: decoder = language_model + lm_head
+    model.projection = qwen3vl.Projection(language_model, model.lm_head)
+
+    # vision features as one stacked tensor instead of List[Tensor]
+    model.model.get_image_feature_class = qwen3vl.Qwen3VLModel_get_image_feature(model.model)
+    model.model.get_image_features = qwen3vl.Qwen3VL_get_image_features.__get__(
         model.model, type(model.model)
     )
     return model, processor
@@ -56,87 +45,44 @@ def load_model_and_processor(model_name):
 
 def prepare_inputs(processor, messages, model_device, image_size=None):
     """Build model.generate() inputs from chat messages; image_size optionally resizes."""
-    text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    text = processor.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True)
     image_inputs, video_inputs = process_vision_info(
-        messages, image_patch_size=processor.image_processor.patch_size
-    )
+        messages, image_patch_size=processor.image_processor.patch_size)
     if image_size is not None and image_inputs:
         image_inputs = [image_inputs[0].resize(image_size)]
     inputs = processor(
         text=[text], images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt"
     ).to(model_device, dtype=torch.float32)
-    inputs.pop("mm_token_type_ids", None)  # rejected by the wrapper's generate(); handled internally
+    inputs.pop("mm_token_type_ids", None)
     return inputs
 
 
-def serialize_to_mblt(model_dict, weight_dict, output_path, ignore_weight=False):
-    """Serialize a ModelDict/WeightDict pair to the MBLT binary and write it to disk."""
-    barr = SerializeMeta().serialize(model_dict, weight_dict, ignore_weight=ignore_weight)
-    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-    with open(output_path, "wb") as f:
-        if isinstance(barr, bytes):
-            f.write(barr)
-        elif isinstance(barr, ChainedByteObj):
-            barr.write(f)
-    print(f"Saved {output_path} ({os.path.getsize(output_path) / (1024 * 1024):.2f} MB)")
-
-
-def capture_vision_inputs(model, inputs):
-    """Capture pixel_values / image_grid_thw at the vision feature entry point."""
-    container = DefaultInputsCaptureContainer()
-    with InputCaptureCtxManager(model.model.get_image_feature_class, 1, container):
-        model(**inputs)
-    if not container.captured_kwargs:
-        raise RuntimeError("Vision feature hook captured no inputs.")
-    captured = container.captured_kwargs[0]
-    return captured["pixel_values"], captured["image_grid_thw"]
-
-
-def set_input_constants_nhwc(model_dict):
-    # Vision input constants use the NHWC layout on the NPU.
-    for subgraph in model_dict.subgraphs:
-        for op in subgraph.operators:
-            if op.layertype == LayerType.InputConstant:
-                subgraph.activations[op.options.outputs[0]].dataformat = DataFormat.NHWC
-
-
 def build_feed_dict(model, processor, image_size):
-    """Capture one sample image's vision inputs and wrap them as the parser feed_dict.
-    Returns (feed_dict, grid_thw); grid_thw is consumed by build_vision_model()."""
+    """Capture real vision-tower inputs from one generate step. Returns (feed_dict, grid_thw)."""
     messages = [{"role": "user", "content": [
         {"type": "image", "image": IMAGE_URL},
         {"type": "text", "text": "Describe this image in detail."},
     ]}]
     inputs = prepare_inputs(processor, messages, model.device, tuple(image_size))
 
-    pixel_values, grid_thw = capture_vision_inputs(model, inputs)
-    images = repreprocess_pixel_values(pixel_values, grid_thw[0])
+    with capture_forward_inputs(model.visual, to_cpu=False) as captured:
+        model.generate(**inputs, max_new_tokens=1, do_sample=False)
 
-    feed_dict = {"images": wrap_tensor("images", images.to(model.device))}
-    return feed_dict, grid_thw
+    # Qwen3VLVisionModel.forward(hidden_states, grid_thw): pixel_values arrives positionally
+    pixel_values, grid_thw = captured["hidden_states"], captured["grid_thw"]
+
+    # hf patch layout -> npu image layout; the compiled tower takes a single `images` tensor
+    images = qwen3vl.repreprocess_pixel_values(pixel_values, grid_thw[0])
+    return {"images": images}, grid_thw
 
 
-def build_vision_model(model, grid_thw):
-    """Build the compilable vision encoder module bound to the captured grid_thw."""
-    vision_model = VisionModelForQwen3VL(model.model)
+def build_compilable_model(model, grid_thw):
+    """Bake the grid-dependent pos/rope buffers into the vision tower so the compiled
+    encoder needs no runtime grid_thw, and return the compilable module."""
+    vision_model = qwen3vl.VisionModelForQwen3VL(model)
     vision_model.set_grid_thw(grid_thw.to(model.device))
-    vision_model.to(model.device)
-    return vision_model
-
-
-def tmp_mblt_compile(vision_model, feed_dict, target_device, mblt_path):
-    """Local mblt_compile for the vision encoder: parse -> NHWC fixup -> serialize.
-
-    qbcompiler's mblt_compile() serializes internally with no hook, so we replicate its
-    shape here to insert set_input_constants_nhwc between parse and serialize.
-    """
-    parser = ModelParser(
-        model=vision_model, backend="torch", target_device=target_device
-    )
-    parser.parse(feed_dict=feed_dict, save_subgraph_type=1, debug=False)
-    model_dict, weight_dict = parser.get_md_wd(body_only=False)
-    set_input_constants_nhwc(model_dict)
-    serialize_to_mblt(model_dict, weight_dict, mblt_path)
+    return vision_model.to(model.device).eval()
 
 
 def get_device_inference_scheme(target_device):
@@ -163,25 +109,36 @@ def main():
     args = parse_args()
     name = args.model.split("/")[-1]
     mblt_path = args.mblt_path or f"./mblt/{name}_encoder.mblt"
+    calib_data_path = f"./calibset_{name}/vision/npy_files.txt"
+    config_name = Path(args.config).stem
+    bundle_dir = Path(args.out_dir) / config_name
     Path(mblt_path).parent.mkdir(parents=True, exist_ok=True)
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    device = "gpu" if torch.cuda.is_available() else "cpu"
 
     print(f"[1/2] build encoder mblt -> {mblt_path}")
     model, processor = load_model_and_processor(args.model)
     feed_dict, grid_thw = build_feed_dict(model, processor, args.image_size)
-    vision_model = build_vision_model(model, grid_thw)
-    tmp_mblt_compile(vision_model, feed_dict, args.target_device, mblt_path)
+    vision_model = build_compilable_model(model, grid_thw)
+    mblt_compile(
+        model=vision_model,
+        mblt_save_path=mblt_path,
+        target_device=args.target_device,
+        backend="torch",
+        device=device,
+        feed_dict=feed_dict,
+        cpu_offload=False,  # -> largest_supported_only=True
+    )
 
-    # [2/2] mxq (consumes the decoder's SpinR1 via head_out_ch_rotation; run decoder first):
-    config_name = Path(args.config).stem
-    bundle_dir = Path(args.out_dir) / config_name
-    bundle_dir.mkdir(parents=True, exist_ok=True)
+    # SpinR1 comes from the decoder MXQ (head_out_ch_rotation in the config); run the decoder first.
     mxq_path = bundle_dir / f"{config_name}.mxq"
+    print(f"[2/2] mxq_compile -> {mxq_path} (config: {config_name})")
     mxq_compile(
         model=mblt_path,
         target_device=args.target_device,
         save_path=str(mxq_path),
-        calib_data_path=f"./calibset_{name}/vision/npy_files.txt",
-        device="gpu" if torch.cuda.is_available() else "cpu",
+        calib_data_path=calib_data_path,
+        device=device,
         inference_scheme=get_device_inference_scheme(args.target_device),
         compile_config=args.config,
     )

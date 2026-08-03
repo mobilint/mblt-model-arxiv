@@ -4,21 +4,8 @@ from pathlib import Path
 
 import torch
 from qbcompiler import mblt_compile, mxq_compile
-from qbcompiler.model_dict.parser.backend.fx_hf_extensions.transformers.models.qwen3vl import (
-    CachedQwen3VLTextRotaryEmbedding,
-    Projection,
-    Qwen3VL_get_image_features,
-    Qwen3VLForConditionalGenerationWrapper,
-    Qwen3VLModel_get_image_feature,
-    build_full_visual_embeds,
-    patched_deepstack_process,
-)
-from qbcompiler.model_dict.parser.backend.hf.util import (
-    DefaultInputsCaptureContainer,
-    InputCaptureCtxManager,
-)
-from qbcompiler.model_dict.parser.backend.torch.object_wrapper import set_attention_mask
-from qbcompiler.model_dict.parser.backend.torch.util import wrap_tensor
+from qbcompiler.model_dict_new.parser.backend.torch.input_capture import capture_forward_inputs
+from qbcompiler.model_dict_new.parser.patcher.models.hf_models import qwen3vl
 from qwen_vl_utils import process_vision_info
 from safetensors.torch import save_file
 from transformers import AutoProcessor
@@ -29,30 +16,39 @@ MODEL_IDS = [
     "Qwen/Qwen3-VL-8B-Instruct",
 ]
 TARGET_DEVICES = ["aries-rb", "regulus-rb"]
-IMAGE_URL = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg?download=true"
 EMBED_TOKENS_KEY = "model.language_model.embed_tokens.weight"
+IMAGE_URL = "https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/bee.jpg?download=true"
 
-# Which axis of each captured input carries the dynamic sequence length.
-SEQ_LAST_DIM = ("input_ids", "position_ids", "attention_mask", "cache_position", "visual_pos_masks")
-SEQ_SECOND_LAST_DIM = ("inputs_embeds", "deepstack_visual_embeds")
+# Axes carrying the dynamic sequence length.
+DYNAMIC_AXES = {
+    "inputs_embeds": [-2],
+    "cache_position": [-1],
+    "rope_deltas": [-1],
+    "deepstack_visual_embeds": [-2],
+}
 
 
 def load_model_and_processor(model_name):
     """Load a Qwen3-VL model (float32) and processor, patched for compilation."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = Qwen3VLForConditionalGenerationWrapper.from_pretrained(
-        model_name, device_map=device, torch_dtype=torch.float32
-    )
+
+    # get Mobilint's patched subclass
+    wrapper_cls = qwen3vl.ensure_qwen3vl_classes_loaded()
+    model = wrapper_cls.from_pretrained(model_name, dtype=torch.float32).to(device).eval()
     processor = AutoProcessor.from_pretrained(model_name)
 
+    # deepstack merge -> plain addition
     language_model = model.model.language_model
-    language_model._deepstack_process = patched_deepstack_process.__get__(
+    language_model._deepstack_process = qwen3vl.patched_deepstack_process.__get__(
         language_model, type(language_model)
     )
-    model.projection = Projection(language_model, model.lm_head)
 
-    model.model.get_image_feature_class = Qwen3VLModel_get_image_feature(model.model)
-    model.model.get_image_features = Qwen3VL_get_image_features.__get__(
+    # the compile unit: decoder = language_model + lm_head
+    model.projection = qwen3vl.Projection(language_model, model.lm_head)
+
+    # vision features as one stacked tensor instead of List[Tensor]
+    model.model.get_image_feature_class = qwen3vl.Qwen3VLModel_get_image_feature(model.model)
+    model.model.get_image_features = qwen3vl.Qwen3VL_get_image_features.__get__(
         model.model, type(model.model)
     )
     return model, processor
@@ -60,83 +56,42 @@ def load_model_and_processor(model_name):
 
 def prepare_inputs(processor, messages, model_device, image_size=None):
     """Build model.generate() inputs from chat messages; image_size optionally resizes."""
-    text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    text = processor.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True)
     image_inputs, video_inputs = process_vision_info(
-        messages, image_patch_size=processor.image_processor.patch_size
-    )
+        messages, image_patch_size=processor.image_processor.patch_size)
     if image_size is not None and image_inputs:
         image_inputs = [image_inputs[0].resize(image_size)]
     inputs = processor(
         text=[text], images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt"
     ).to(model_device, dtype=torch.float32)
-    inputs.pop("mm_token_type_ids", None)  # rejected by the wrapper's generate(); handled internally
+    inputs.pop("mm_token_type_ids", None)
     return inputs
 
 
-def install_visual_2tuple_adapter(model):
-    """Adapt the vision tower's forward to a 2-tuple; transformers 4.57.x returns a 3-field output."""
-    visual = model.model.visual
-    original_forward = visual.forward
-
-    def adapter(hidden_states, grid_thw, **kwargs):
-        out = original_forward(hidden_states, grid_thw=grid_thw, **kwargs)
-        if isinstance(out, tuple):
-            return (out[0], out[1]) if len(out) == 2 else (out[1], out[2])
-        return out.pooler_output, out.deepstack_features
-
-    visual.forward = adapter
-
-
-def capture_projection_inputs(model, inputs):
-    """Capture the first Projection.forward kwargs during one generate step."""
-    container = DefaultInputsCaptureContainer()
-    with InputCaptureCtxManager(model.projection, 1, container):
-        model.generate(**inputs, max_new_tokens=1, do_sample=False)
-    return container.captured_kwargs[0]
-
-
 def build_feed_dict(model, processor):
-    """Run one calibration step to capture real Projection inputs, then wrap them for
-    the parser. Returns (feed_dict, position_ids)."""
-    device = model.device
+    """Capture real Projection inputs from one generate step. Returns (feed_dict, position_ids)."""
     messages = [{"role": "user", "content": [
         {"type": "image", "image": IMAGE_URL},
         {"type": "text", "text": "Describe this image in detail."},
     ]}]
-    inputs = prepare_inputs(processor, messages, device, image_size=(224, 224))
-    captured = capture_projection_inputs(model, inputs)
+    inputs = prepare_inputs(processor, messages, model.device, image_size=(224, 224))
 
-    # mrope position_ids has dim0 == 4 in transformers 4.57.x; set_rope expects 3 (t/h/w).
-    position_ids = captured["position_ids"].to(device)
-    if position_ids.shape[0] > 3:
-        position_ids = position_ids[:3]
+    with capture_forward_inputs(model.projection, to_cpu=False) as feed_dict:
+        model.generate(**inputs, max_new_tokens=1, do_sample=False)
 
-    captured["deepstack_visual_embeds"] = build_full_visual_embeds(
-        captured["deepstack_visual_embeds"], captured["visual_pos_masks"]
+    # captured masked (L, N_vis, D) -> full sequence (L, T, D); Projection splits it internally
+    feed_dict["deepstack_visual_embeds"] = qwen3vl.build_full_visual_embeds(
+        feed_dict["deepstack_visual_embeds"], feed_dict["visual_pos_masks"]
     )
-
-    feed_dict = {}
-    for name, value in captured.items():
-        if not isinstance(value, torch.Tensor):
-            feed_dict[name] = value
-            continue
-        wrapped = wrap_tensor(name, value.to(device))
-        if name in SEQ_LAST_DIM:
-            wrapped.src_shape[-1].set_dynamic(True)
-        elif name in SEQ_SECOND_LAST_DIM:
-            wrapped.src_shape[-2].set_dynamic(True)
-        feed_dict[name] = wrapped
-
-    feed_dict["logits_to_keep"] = 1  # emit only the last token's logits
-    set_attention_mask(feed_dict["attention_mask"], "causal_mask")
-    return feed_dict, position_ids
+    return dict(feed_dict), feed_dict["position_ids"]
 
 
 def build_compilable_model(model, position_ids):
     """Bake mrope cos/sin into a cached RoPE buffer so the compiled decoder needs no
     runtime position_ids, and return the compilable Projection module."""
     language_model = model.projection.language_model
-    language_model.rotary_emb = CachedQwen3VLTextRotaryEmbedding(language_model.rotary_emb)
+    language_model.rotary_emb = qwen3vl.CachedQwen3VLTextRotaryEmbedding(language_model.rotary_emb)
     language_model.rotary_emb.set_rope(position_ids)
     return model.projection
 
@@ -180,23 +135,17 @@ def main():
 
     print(f"[1/3] build decoder mblt -> {mblt_path}")
     model, processor = load_model_and_processor(args.model)
-    
-    # transformers 4.57.x returns a 3-field visual output; 
-    # downstream code expects a 2-tuple. 
-    install_visual_2tuple_adapter(model)
-    
     feed_dict, position_ids = build_feed_dict(model, processor)
-
-    # projection is (language, lm_head)
     projection = build_compilable_model(model, position_ids)
-
     mblt_compile(
         model=projection,
         mblt_save_path=mblt_path,
         target_device=args.target_device,
         backend="torch",
+        device=device,
         feed_dict=feed_dict,
-        output_meta={"type": "list", "keys": [0]},
+        dynamic_axes=DYNAMIC_AXES,
+        cpu_offload=False,  # -> largest_supported_only=True
     )
 
     mxq_path = bundle_dir / f"{config_name}.mxq"

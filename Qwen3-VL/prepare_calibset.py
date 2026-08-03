@@ -23,6 +23,23 @@ MODEL_IDS = [
 IMAGES_DIR = "../image_files"  # shared MS COCO images from repo-root download_image_data.py
 IMAGE_SIZE = (224, 224)
 
+# Language graph inputs, in the order the quantizer consumes them.
+# Projection.forward() splits the stacked deepstack tensor into one graph input per
+# layer, and the graph lists them in REVERSE layer order -- verified on the .mblt:
+#   .../slice   -> add_1  (op#35, layer 0)
+#   .../slice_0 -> add_7  (op#65, layer 1)
+#   .../slice_1 -> add_11 (op#95, layer 2)
+# All four inputs share the same shape, so the quantizer cannot tell them apart by
+# shape and maps files to inputs sequentially (mmc: "They will be mapped
+# sequentially"). Names below are advisory only -- the ORDER is what must be right.
+LANG_INPUT_NAMES = [
+    "deepstack_visual_embeds/reshape/slice_1",  # deepstack layer 2
+    "deepstack_visual_embeds/reshape/slice_0",  # deepstack layer 1
+    "deepstack_visual_embeds/reshape/slice",    # deepstack layer 0
+    "inputs_embeds/reshape",
+]
+DEEPSTACK_LAYER_ORDER = (2, 1, 0)  # slot i of LANG_INPUT_NAMES <- deepstack[layer]
+
 PROMPTS = [
     "Describe this image.",
     "Describe this image in detail, including all objects, colors, textures, and spatial relationships.",
@@ -72,10 +89,22 @@ def build_samples(images_dir=IMAGES_DIR):
 
 
 def save_lang_sample(sample_dir, inputs_embeds_np, deepstack_np):
-    """Save one language calibration sample (inputs_embeds + deepstack_visual_embeds)."""
+    """Save one language calibration sample as one file per graph input.
+
+    The graph takes 4 inputs of shape (1, T, H) -- 3 deepstack layers + inputs_embeds --
+    so the stacked (3, T, H) deepstack tensor is split. Files are numbered because the
+    quantizer reads them sorted by filename and maps them to graph inputs in that order
+    (see LANG_INPUT_NAMES). Shapes drop the leading batch axis: the graph input is
+    (1, 1, T, H) while the npy is (1, T, H), matching the vision calibset convention.
+    """
     os.makedirs(sample_dir, exist_ok=True)
-    np.save(os.path.join(sample_dir, "inputs_embeds.npy"), inputs_embeds_np)
-    np.save(os.path.join(sample_dir, "deepstack_visual_embeds.npy"), deepstack_np)
+    for slot, layer in enumerate(DEEPSTACK_LAYER_ORDER):
+        np.save(
+            os.path.join(sample_dir, f"{slot}_deepstack_layer{layer}.npy"),
+            deepstack_np[layer : layer + 1],  # keep the (1, T, H) rank
+        )
+    np.save(os.path.join(sample_dir, f"{len(DEEPSTACK_LAYER_ORDER)}_inputs_embeds.npy"),
+            inputs_embeds_np)
 
 
 def merge_language_dirs(input_dirs, output_dir):
@@ -229,7 +258,11 @@ def generate(model, processor, samples, output_dir, max_new_tokens, intermediate
         f.write("\n".join(vision_npy_paths) + "\n")
     for stage in ("prefill", "decode"):
         if counts[stage] > 0:
-            list_calib_files_in_json(dirs[stage], os.path.join(dirs[stage], "npy_files.json"))
+            list_calib_files_in_json(
+                dirs[stage],
+                os.path.join(dirs[stage], "npy_files.json"),
+                input_names=LANG_INPUT_NAMES,
+            )
 
     # merge prefill + decode into language/
     if counts["prefill"] > 0 and counts["decode"] > 0:

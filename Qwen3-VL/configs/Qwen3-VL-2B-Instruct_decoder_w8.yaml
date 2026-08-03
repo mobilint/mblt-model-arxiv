@@ -13,7 +13,9 @@ quantization:
     layerOverrides:
       activation16Bits:
       - inputs_embeds/reshape
-      - deepstack_visual_embeds_0
+      - deepstack_visual_embeds/reshape/slice
+      - deepstack_visual_embeds/reshape/slice_0
+      - deepstack_visual_embeds/reshape/slice_1
 advancedQuantization:
   EquivalentTransformation:
     UD:
