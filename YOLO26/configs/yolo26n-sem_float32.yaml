@@ -1,0 +1,8 @@
+# yolo26n-sem | task: semantic | input: float32
+
+# No preprocessing block: prepare_calibset.py already produced float32 tensors.
+uint8Input:
+  apply: false
+quantization:
+  calibration:
+    output: 1  # per channel (default 0 = per layer)

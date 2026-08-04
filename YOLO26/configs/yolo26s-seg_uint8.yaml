@@ -1,0 +1,12 @@
+# yolo26s-seg | task: detect | input: uint8
+
+preprocessing:
+  apply: true
+  autoConvertFormat: true
+  pipeline:
+    - {op: letterbox, height: 640, width: 640, padValue: 114}
+uint8Input:
+  apply: true
+quantization:
+  calibration:
+    output: 1  # per channel (default 0 = per layer)

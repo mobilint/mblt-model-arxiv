@@ -1,0 +1,12 @@
+# yolo26l-obb | task: obb | input: uint8
+
+preprocessing:
+  apply: true
+  autoConvertFormat: true
+  pipeline:
+    - {op: letterbox, height: 1024, width: 1024, padValue: 114}
+uint8Input:
+  apply: true
+quantization:
+  calibration:
+    output: 1  # per channel (default 0 = per layer)

@@ -1,0 +1,14 @@
+# yolo26s-cls | task: classify | input: uint8
+
+preprocessing:
+  apply: true
+  autoConvertFormat: true
+  pipeline:
+    - {op: resize, height: 256, width: 256, mode: bilinear}
+    - {op: centerCrop, height: 224, width: 224}
+    - {op: normalize, scaleToUint8: true, mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225]}
+uint8Input:
+  apply: true
+quantization:
+  calibration:
+    output: 1  # per channel (default 0 = per layer)
