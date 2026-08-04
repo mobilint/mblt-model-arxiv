@@ -8,7 +8,7 @@ import torch
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-TEXT_DIR = "../text_files"          # raw text from download_text_data.py (run from this model dir)
+TEXT_DIR = "../wikipedia_files"     # raw text from download_wikipedia_data.py (run from this model dir)
 
 # Selectable model ids. 1B and 3B share a tokenizer but have different embeddings,
 # so their calibsets (inputs_embeds) differ even from identical text.

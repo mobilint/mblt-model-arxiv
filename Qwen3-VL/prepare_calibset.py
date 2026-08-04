@@ -20,7 +20,7 @@ MODEL_IDS = [
     "Qwen/Qwen3-VL-4B-Instruct",
     "Qwen/Qwen3-VL-8B-Instruct",
 ]
-IMAGES_DIR = "../image_files"  # shared MS COCO images from repo-root download_image_data.py
+IMAGES_DIR = "../coco_files"  # shared MS COCO images from repo-root download_coco_data.py
 IMAGE_SIZE = (224, 224)
 
 # Language graph inputs, in the order the quantizer consumes them.
@@ -84,7 +84,7 @@ def build_samples(images_dir=IMAGES_DIR):
     """One sample per image, cycling through PROMPTS for diversity."""
     image_files = sorted(glob.glob(f"{images_dir}/*.jpg"))
     if not image_files:
-        raise FileNotFoundError(f"No JPG images found in {images_dir} (run ../download_image_data.py first)")
+        raise FileNotFoundError(f"No JPG images found in {images_dir} (run ../download_coco_data.py first)")
     return [{"image_url": p, "prompt": PROMPTS[i % len(PROMPTS)]} for i, p in enumerate(image_files)]
 
 
