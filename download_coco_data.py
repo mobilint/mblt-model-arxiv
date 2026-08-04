@@ -8,7 +8,7 @@ import aiohttp
 from datasets import load_dataset
 from tqdm.asyncio import tqdm
 
-SAVE_DIR: str = "./image_files"
+SAVE_DIR: str = "./coco_files"
 DATASET: str = "ChristophSchuhmann/MS_COCO_2017_URL_TEXT"
 SEED: int = 42
 CONCURRENCY_LIMIT: int = 50  # simultaneous downloads; too high (e.g. 500) risks server blocks

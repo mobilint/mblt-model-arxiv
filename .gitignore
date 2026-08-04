@@ -13,6 +13,8 @@ spinWeight
 # Quantization configs ship as YAML; the .py sources stay local-only.
 **/configs/*.py
 template
+*.zip
+download_data.sh
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

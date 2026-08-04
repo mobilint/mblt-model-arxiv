@@ -1,14 +1,25 @@
-import argparse
 import os
-import sys
-import librosa
-import soundfile as sf
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from itertools import islice
-from datasets import load_dataset
-from tqdm import tqdm
 
-SAVE_DIR: str = "./audio_files"
+# Must run before importing datasets/huggingface_hub: these timeout constants are read
+# from the env at import time. The 10s default times out slow reads and spams backoff
+# retries; raise it.
+os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "60")
+os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "30")
+
+import argparse  # noqa: E402
+import sys  # noqa: E402
+from concurrent.futures import ThreadPoolExecutor, as_completed  # noqa: E402
+from itertools import islice  # noqa: E402
+
+import librosa  # noqa: E402
+import soundfile as sf  # noqa: E402
+from datasets import load_dataset  # noqa: E402
+from tqdm import tqdm  # noqa: E402
+
+SAVE_DIR: str = "./fleurs_files"
+# A modest worker count is intentional: one stream per language saturates the link and
+# causes read timeouts, so cap it instead of letting ThreadPoolExecutor pick min(32, cpu+4).
+N_WORKERS: int = 4
 
 FLEURS_LANGUAGES: list[str] = [
     "ar_eg",  # Arabic (Egypt)
@@ -33,6 +44,12 @@ FLEURS_LANGUAGES: list[str] = [
 
 def download_one_language(lang: str, num_samples: int) -> int:
     """Stream one language into 16 kHz WAV files under SAVE_DIR; skip existing. Returns new-file count."""
+    # Skip the network entirely when this language is already complete.
+    if all(
+        os.path.isfile(os.path.join(SAVE_DIR, f"{lang}_{i:04d}.wav")) for i in range(num_samples)
+    ):
+        return 0
+
     new_count = 0
     try:
         dataset = load_dataset(
@@ -64,7 +81,7 @@ def download_fleurs_data(num_samples: int = 20) -> int:
     os.makedirs(SAVE_DIR, exist_ok=True)
 
     total_new = 0
-    with ThreadPoolExecutor() as pool:
+    with ThreadPoolExecutor(max_workers=N_WORKERS) as pool:
         futures = {
             pool.submit(download_one_language, lang, num_samples): lang for lang in FLEURS_LANGUAGES
         }

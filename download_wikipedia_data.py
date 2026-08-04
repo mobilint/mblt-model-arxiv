@@ -7,7 +7,7 @@ from itertools import islice
 from datasets import load_dataset
 from tqdm import tqdm
 
-SAVE_DIR: str = "./text_files"
+SAVE_DIR: str = "./wikipedia_files"
 SNAPSHOT: str = "20231101"
 
 WIKIPEDIA_LANGUAGES: list[str] = [
