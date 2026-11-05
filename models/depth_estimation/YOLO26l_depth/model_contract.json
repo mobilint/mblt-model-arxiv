@@ -1,0 +1,73 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "nyu-depth",
+    "dataset_code": "../../../datasets/nyu-depth",
+    "legacy": true,
+    "onnx": {
+      "primary": {
+        "delta1": 0.81726
+      },
+      "sample_count": 654,
+      "secondary": {
+        "abs_rel": 0.13931,
+        "rmse": 0.56908
+      }
+    },
+    "primary": {
+      "delta1": 0.81328
+    },
+    "recorded_with": "mobilint/qbcompiler:1.2-cuda12.8.1-ubuntu22.04",
+    "sample_count": 654,
+    "secondary": {
+      "abs_rel": 0.14213,
+      "rmse": 0.5791
+    },
+    "task": "depth_estimation"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "yolo26l-depth.pt"
+  },
+  "inference": {
+    "params": {}
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      768,
+      768
+    ]
+  },
+  "model": "YOLO26l_depth",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "depth-map",
+      "shape": null
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "pad_value": 114,
+      "scale": 255,
+      "size": [
+        768,
+        768
+      ]
+    }
+  },
+  "task": "depth_estimation"
+}

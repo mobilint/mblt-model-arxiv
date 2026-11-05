@@ -1,0 +1,78 @@
+{
+  "advancedQuantization": {
+    "biasCorrection": {
+      "apply": false
+    },
+    "hessianQuant": {
+      "apply": true,
+      "solver": "symmetric"
+    }
+  },
+  "bit": {
+    "layerOverrides": {
+      "activation16Bits": [
+        "/features/features.11/squeeze/Conv_output_0_channel_last/relu",
+        "/features/features.11/expand1x1/Conv_output_0_channel_last/relu",
+        "/features/features.11/expand3x3/Conv_output_0_channel_last/relu",
+        "/features/features.11/expand1x1/Conv_output_0_channel_last/relu/concat",
+        "/features/features.12/squeeze/Conv_output_0_channel_last/relu",
+        "/features/features.12/expand1x1/Conv_output_0_channel_last/relu",
+        "/features/features.12/expand3x3/Conv_output_0_channel_last/relu",
+        "/features/features.12/expand1x1/Conv_output_0_channel_last/relu/concat",
+        "/classifier/classifier.1/Conv_output_0_channel_last/relu"
+      ],
+      "weight16Bits": [],
+      "weight8Bits": []
+    }
+  },
+  "imageChannels": 3,
+  "preprocessing": {
+    "apply": true,
+    "autoConvertFormat": true,
+    "inputConfigs": {},
+    "pipeline": [
+      {
+        "height": 256,
+        "mode": "bilinear",
+        "op": "resize",
+        "width": 256
+      },
+      {
+        "height": 224,
+        "op": "centerCrop",
+        "width": 224
+      },
+      {
+        "fuseIntoFirstLayer": false,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "op": "normalize",
+        "scaleToUint8": true,
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ]
+      }
+    ]
+  },
+  "quantization": {
+    "calibration": {
+      "maxPercentile": {
+        "percentile": 0.9,
+        "topKRatio": 0.0012136117282291
+      },
+      "method": 1,
+      "mode": 1,
+      "output": 0
+    }
+  },
+  "resourceManagement": {
+    "weightMemory": {
+      "method": 0
+    }
+  }
+}

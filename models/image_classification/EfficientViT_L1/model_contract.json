@@ -1,0 +1,86 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "imagenet",
+    "dataset_code": "../../../datasets/imagenet",
+    "legacy": false,
+    "onnx": {
+      "primary": {
+        "top1_accuracy": 0.8444
+      },
+      "sample_count": 50000,
+      "secondary": {
+        "top5_accuracy": 0.96864
+      }
+    },
+    "primary": {
+      "top1_accuracy": 0.84022
+    },
+    "recorded_with": "mobilint/qbcompiler@sha256:6ad69aaa9581487ac6a1864b88d4c2179c7a4a486a3ab1ac376dbdfe763415e7",
+    "sample_count": 50000,
+    "secondary": {
+      "top5_accuracy": 0.96646
+    },
+    "task": "image_classification"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "efficientvit_l1"
+  },
+  "inference": {
+    "params": {
+      "topk": 5
+    }
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      224,
+      224
+    ]
+  },
+  "model": "EfficientViT_L1",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "class-logits",
+      "shape": [
+        1,
+        1000
+      ]
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "crop": [
+        224,
+        224
+      ],
+      "interpolation": "bicubic",
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "resize_shorter_side": 224,
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    }
+  },
+  "task": "image_classification"
+}

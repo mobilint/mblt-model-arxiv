@@ -1,0 +1,24 @@
+# lfw benchmark definition: labels, layout, and download sources.
+name: lfw
+tasks:
+- face_recognition
+calib: calib
+val: eval
+images: 13233
+pairs: 6000
+folds: 10
+download:
+  huggingface: marcelohaps/lfw
+  revision: 12a61458b56d0433d07269dc1d64368abf4f6b4d
+  sha256:
+    pairs.csv: 7f540157be42f57ab5bb1d7ef53b7b379e0331b4842cbd32f4d1b625243e54fe
+    train/metadata.csv: ebe9dce66e8c751647086731dc87b329b5cfd2de21d79ae570bb464b8a51709a
+alignment:
+  repository: https://github.com/otroshi/edgeface
+  revision: ce86851cfc37979a9cd2558598d0e9bc592cbba3
+  crop:
+  - 112
+  - 112
+export_files:
+- _private/align.py
+- _private/align.py.lock

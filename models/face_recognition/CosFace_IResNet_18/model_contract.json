@@ -1,0 +1,79 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "lfw",
+    "dataset_code": "../../../datasets/lfw",
+    "legacy": false,
+    "onnx": {
+      "primary": {
+        "lfw_accuracy": 0.99533
+      },
+      "sample_count": 7701,
+      "secondary": {
+        "lfw_accuracy_std": 0.00371
+      }
+    },
+    "primary": {
+      "lfw_accuracy": 0.99483
+    },
+    "recorded_with": "mobilint/qbcompiler@sha256:c1fe08bee89e49bdf3bf2d1ab28e4288ffc8ab213efe647aba3b4db71804541b",
+    "sample_count": 7701,
+    "secondary": {
+      "lfw_accuracy_std": 0.0032
+    },
+    "task": "face_recognition"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "https://1drv.ms/u/s!AswpsDO2toNKq0lWY69vN58GR6mw?e=p9Ov5d#path=glint360k_cosface_r18_fp16_0.1/backbone.pth&sha256=15cdfbcddb4b482c6bf19b677155b8d2abd093a45920cd91440810b9a6bc1acc"
+  },
+  "inference": {
+    "params": {}
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {},
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      112,
+      112
+    ]
+  },
+  "model": "CosFace_IResNet_18",
+  "outputs": [
+    {
+      "name": "embedding",
+      "semantics": "embedding",
+      "shape": [
+        1,
+        512
+      ]
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "interpolation": "bilinear",
+      "mean": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "size": [
+        112,
+        112
+      ],
+      "std": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  },
+  "task": "face_recognition"
+}

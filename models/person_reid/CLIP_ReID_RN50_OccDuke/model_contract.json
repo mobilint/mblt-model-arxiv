@@ -1,0 +1,83 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "occluded-duke",
+    "dataset_code": "../../../datasets/occluded-duke",
+    "legacy": false,
+    "onnx": {
+      "primary": {
+        "map": 0.53505
+      },
+      "sample_count": 19871,
+      "secondary": {
+        "rank1": 0.61176,
+        "rank10": 0.82896,
+        "rank5": 0.7724
+      }
+    },
+    "primary": {
+      "map": 0.52993
+    },
+    "recorded_with": "mobilint/qbcompiler@sha256:c1fe08bee89e49bdf3bf2d1ab28e4288ffc8ab213efe647aba3b4db71804541b",
+    "sample_count": 19871,
+    "secondary": {
+      "rank1": 0.60588,
+      "rank10": 0.81855,
+      "rank5": 0.76697
+    },
+    "task": "person_reid"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "https://drive.google.com/file/d/1naz7QjzYlC2qe4SHxjxss4tP81KRCrMj/view#sha256=6dbad830e2d1191c77f491bf5ee14622cd3f0f630b84c19d1ee53f6298a9c687"
+  },
+  "inference": {
+    "params": {}
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {},
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      256,
+      128
+    ]
+  },
+  "model": "CLIP_ReID_RN50_OccDuke",
+  "outputs": [
+    {
+      "name": "embedding",
+      "semantics": "embedding",
+      "shape": [
+        1,
+        3072
+      ]
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "interpolation": "bilinear",
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "size": [
+        256,
+        128
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    }
+  },
+  "task": "person_reid"
+}

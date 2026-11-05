@@ -1,0 +1,10 @@
+# widerface benchmark definition: labels, layout, and download sources.
+name: widerface
+title: WIDER FACE
+tasks:
+- face_detection
+calib: calib
+val: eval/images
+download:
+  images: https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/WIDER_val.zip
+  annotations: https://huggingface.co/datasets/CUHK-CSE/wider_face/resolve/main/data/wider_face_split.zip

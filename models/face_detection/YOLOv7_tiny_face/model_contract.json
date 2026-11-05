@@ -1,0 +1,106 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "widerface",
+    "dataset_code": "../../../datasets/widerface",
+    "legacy": true,
+    "onnx": {
+      "primary": {
+        "hard_ap": 0.82024
+      },
+      "sample_count": 3226,
+      "secondary": {
+        "easy_ap": 0.9488,
+        "medium_ap": 0.92921
+      }
+    },
+    "primary": {
+      "hard_ap": 0.8127
+    },
+    "recorded_with": "mobilint/qbcompiler:1.2-cuda12.8.1-ubuntu22.04",
+    "sample_count": 3226,
+    "secondary": {
+      "easy_ap": 0.94551,
+      "medium_ap": 0.92505
+    },
+    "task": "face_detection"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "https://drive.google.com/uc?id=1Mona-I4PclJr5mjX1qb8dgDeMpYyBcwM"
+  },
+  "inference": {
+    "params": {
+      "anchors": [
+        [
+          4,
+          5,
+          6,
+          8,
+          10,
+          12
+        ],
+        [
+          15,
+          19,
+          23,
+          30,
+          39,
+          52
+        ],
+        [
+          72,
+          97,
+          123,
+          164,
+          209,
+          297
+        ]
+      ],
+      "conf_thres": 0.001,
+      "iou_thres": 0.5,
+      "max_det": 300,
+      "n_classes": 1,
+      "nmsfree": false,
+      "reg_max": 1
+    }
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ]
+  },
+  "model": "YOLOv7_tiny_face",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "yolo-detection-heads",
+      "shape": null
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "pad_value": 114,
+      "scale": 255,
+      "size": [
+        640,
+        640
+      ]
+    }
+  },
+  "task": "face_detection"
+}

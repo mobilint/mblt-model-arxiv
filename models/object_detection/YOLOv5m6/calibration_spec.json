@@ -1,0 +1,23 @@
+{
+  "dataset": "coco",
+  "expected_sample_count": 100,
+  "layout": {
+    "adapter": "flat-directory.v1",
+    "classes": null,
+    "image_suffixes": [
+      ".jpeg",
+      ".jpg",
+      ".png"
+    ]
+  },
+  "profile": "seeded-sample-100.v1",
+  "selection": {
+    "adapter": "seeded-sample.v1",
+    "sample_size": 100,
+    "seed": 0
+  },
+  "source": {
+    "description": "COCO 2017 validation images as one flat directory (val2017/*.jpg)",
+    "redistributable": false
+  }
+}

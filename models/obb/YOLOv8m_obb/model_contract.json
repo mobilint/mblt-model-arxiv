@@ -1,0 +1,79 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "dotav1",
+    "dataset_code": "../../../datasets/dotav1/protocols/legacy-v1",
+    "legacy": true,
+    "onnx": {
+      "primary": {
+        "map50": 0.71983
+      },
+      "sample_count": 458,
+      "secondary": {
+        "map50_95": 0.57484
+      }
+    },
+    "primary": {
+      "map50": 0.72338
+    },
+    "protocol": "dotav1-ignore-difficult.v1",
+    "recorded_with": "mobilint/qbcompiler:1.2-cuda12.8.1-ubuntu22.04",
+    "sample_count": 458,
+    "secondary": {
+      "map50_95": 0.57734
+    },
+    "task": "obb"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "yolov8m-obb.pt"
+  },
+  "inference": {
+    "params": {
+      "class_count": 15,
+      "conf_thres": 0.01,
+      "dflfree": false,
+      "iou_thres": 0.7,
+      "n_extra": 1,
+      "reg_max": 16
+    }
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      1024,
+      1024
+    ]
+  },
+  "model": "YOLOv8m_obb",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "yolo-obb-heads",
+      "shape": null
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "pad_value": 114,
+      "scale": 255,
+      "size": [
+        1024,
+        1024
+      ]
+    }
+  },
+  "task": "obb"
+}

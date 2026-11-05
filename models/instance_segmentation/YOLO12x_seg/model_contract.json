@@ -1,0 +1,81 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "coco",
+    "dataset_code": "../../../datasets/coco",
+    "legacy": true,
+    "onnx": {
+      "primary": {
+        "map50_95": 0.43457
+      },
+      "sample_count": 5000,
+      "secondary": {
+        "map50": 0.68396
+      }
+    },
+    "primary": {
+      "map50_95": 0.43461
+    },
+    "recorded_with": "mobilint/qbcompiler:1.2-cuda12.8.1-ubuntu22.04",
+    "sample_count": 5000,
+    "secondary": {
+      "map50": 0.68078
+    },
+    "task": "instance_segmentation"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12x-seg.pt"
+  },
+  "inference": {
+    "params": {
+      "conf_thres": 0.001,
+      "iou_thres": 0.7,
+      "n_extra": 32,
+      "reg_max": 16
+    }
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ]
+  },
+  "model": "YOLO12x_seg",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "yolo-instance-segmentation-heads",
+      "shape": null
+    },
+    {
+      "name": "output1",
+      "semantics": "yolo-instance-segmentation-heads",
+      "shape": null
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "pad_value": 114,
+      "scale": 255,
+      "size": [
+        640,
+        640
+      ]
+    }
+  },
+  "task": "instance_segmentation"
+}

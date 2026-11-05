@@ -1,0 +1,86 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "imagenet",
+    "dataset_code": "../../../datasets/imagenet",
+    "legacy": true,
+    "onnx": {
+      "primary": {
+        "top1_accuracy": 0.82524
+      },
+      "sample_count": 50000,
+      "secondary": {
+        "top5_accuracy": 0.96124
+      }
+    },
+    "primary": {
+      "top1_accuracy": 0.82394
+    },
+    "recorded_with": "mobilint/qbcompiler:1.2-cuda12.8.1-ubuntu22.04",
+    "sample_count": 50000,
+    "secondary": {
+      "top5_accuracy": 0.96142
+    },
+    "task": "image_classification"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "flexivit_small"
+  },
+  "inference": {
+    "params": {
+      "topk": 5
+    }
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      240,
+      240
+    ]
+  },
+  "model": "FlexiVit_Small",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "class-logits",
+      "shape": [
+        1,
+        1000
+      ]
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "crop": [
+        240,
+        240
+      ],
+      "interpolation": "bicubic",
+      "mean": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "resize_shorter_side": 252,
+      "std": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  },
+  "task": "image_classification"
+}

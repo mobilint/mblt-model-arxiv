@@ -1,0 +1,14 @@
+# market1501 benchmark definition: labels, layout, and download sources.
+name: market1501
+tasks:
+- person_reid
+calib: calib
+val: eval
+cameras: 6
+splits:
+  query: 3368
+  bounding_box_test: 19732
+  bounding_box_train: 12936
+download:
+  archive: https://drive.google.com/file/d/0B8-rUzbwVRk0c054eEozWG9COHM/view
+  sha256: 416bb77b5a2449b32e936f623cbee58becf1a9e7e936f36380cb8f9ab928fe96

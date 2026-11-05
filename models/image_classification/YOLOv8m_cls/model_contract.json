@@ -1,0 +1,86 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "imagenet",
+    "dataset_code": "../../../datasets/imagenet",
+    "legacy": true,
+    "onnx": {
+      "primary": {
+        "top1_accuracy": 0.76762
+      },
+      "sample_count": 50000,
+      "secondary": {
+        "top5_accuracy": 0.93454
+      }
+    },
+    "primary": {
+      "top1_accuracy": 0.76534
+    },
+    "recorded_with": "mobilint/qbcompiler:1.2-cuda12.8.1-ubuntu22.04",
+    "sample_count": 50000,
+    "secondary": {
+      "top5_accuracy": 0.93254
+    },
+    "task": "image_classification"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "yolov8m-cls.pt"
+  },
+  "inference": {
+    "params": {
+      "topk": 5
+    }
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      224,
+      224
+    ]
+  },
+  "model": "YOLOv8m_cls",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "class-logits",
+      "shape": [
+        1,
+        1000
+      ]
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "crop": [
+        224,
+        224
+      ],
+      "interpolation": "bilinear",
+      "mean": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "resize_shorter_side": 224,
+      "std": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "task": "image_classification"
+}

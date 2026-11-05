@@ -1,0 +1,9 @@
+# nyu-depth benchmark definition: labels, layout, and download sources.
+name: nyu-depth
+title: NYU Depth V2
+calib: calib
+val: eval/images
+tasks:
+- depth_estimation
+download:
+  url: https://github.com/ultralytics/assets/releases/download/v0.0.0/nyu-depth.zip

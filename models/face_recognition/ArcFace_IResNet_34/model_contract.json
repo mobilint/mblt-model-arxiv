@@ -1,0 +1,79 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "lfw",
+    "dataset_code": "../../../datasets/lfw",
+    "legacy": false,
+    "onnx": {
+      "primary": {
+        "lfw_accuracy": 0.99667
+      },
+      "sample_count": 7701,
+      "secondary": {
+        "lfw_accuracy_std": 0.00298
+      }
+    },
+    "primary": {
+      "lfw_accuracy": 0.99633
+    },
+    "recorded_with": "mobilint/qbcompiler@sha256:c1fe08bee89e49bdf3bf2d1ab28e4288ffc8ab213efe647aba3b4db71804541b",
+    "sample_count": 7701,
+    "secondary": {
+      "lfw_accuracy_std": 0.00296
+    },
+    "task": "face_recognition"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "https://1drv.ms/u/s!AswpsDO2toNKq0lWY69vN58GR6mw?e=p9Ov5d#path=ms1mv3_arcface_r34_fp16/backbone.pth&sha256=d90db283c24048efd8e17488146219fc5c70876bcff61647a647b6a3c872ba5d"
+  },
+  "inference": {
+    "params": {}
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {},
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      112,
+      112
+    ]
+  },
+  "model": "ArcFace_IResNet_34",
+  "outputs": [
+    {
+      "name": "embedding",
+      "semantics": "embedding",
+      "shape": [
+        1,
+        512
+      ]
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "interpolation": "bilinear",
+      "mean": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "size": [
+        112,
+        112
+      ],
+      "std": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  },
+  "task": "face_recognition"
+}

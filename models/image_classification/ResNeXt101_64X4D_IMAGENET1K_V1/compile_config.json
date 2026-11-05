@@ -1,0 +1,256 @@
+{
+  "advancedQuantization": {
+    "biasCorrection": {
+      "apply": true
+    }
+  },
+  "bufferMode": 1,
+  "configVersion": "1.0.0",
+  "cpuOffload": false,
+  "debug": false,
+  "dtype": "float",
+  "forceNpuInputReposition": false,
+  "forceNpuOutputReposition": false,
+  "groupWise": {
+    "apply": false,
+    "cacheDir": "",
+    "checkpoint": false,
+    "expertGroups": [],
+    "gpuBudgetGb": 0.0,
+    "gpuSafetyMarginGb": 4.0,
+    "groupSize": 0,
+    "keepCache": false,
+    "partitionPolicy": "transformer_block",
+    "retainTopologyWeights": true
+  },
+  "imageChannels": 3,
+  "inferenceScheme": "all",
+  "llm": {
+    "apply": false,
+    "attributes": {
+      "calibration": {
+        "randomSeqLength": 80,
+        "useFullSeqLength": false
+      },
+      "debug": {
+        "apply": false,
+        "batchDebugBundleSize": 0
+      },
+      "maxCacheLength": 4096,
+      "maxCoreDataLength": 128,
+      "maxDataLength": 4096,
+      "maxSequenceLength": 4096,
+      "runtime": {
+        "batchSize": 1,
+        "dynamicMask": false,
+        "dynamicRope": false,
+        "npuCoreIds": [
+          0
+        ],
+        "useGlobalCore": false
+      }
+    },
+    "npuParallelDegree": 1
+  },
+  "moe": {
+    "scoreThreshold": 0.0,
+    "selectionMode": 0,
+    "selectionModeList": [
+      "TopK",
+      "All",
+      "Threshold"
+    ]
+  },
+  "optimizeOption": 1,
+  "preprocessing": {
+    "apply": true,
+    "autoConvertFormat": true,
+    "inputConfigs": {},
+    "pipeline": [
+      {
+        "height": 232,
+        "mode": "bilinear",
+        "op": "resize",
+        "width": 232
+      },
+      {
+        "height": 224,
+        "op": "centerCrop",
+        "width": 224
+      },
+      {
+        "fuseIntoFirstLayer": false,
+        "mean": [
+          0.485,
+          0.456,
+          0.406
+        ],
+        "op": "normalize",
+        "scaleToUint8": true,
+        "std": [
+          0.229,
+          0.224,
+          0.225
+        ]
+      }
+    ]
+  },
+  "quantization": {
+    "bit": {
+      "layerOverrides": {
+        "activation16Bits": [],
+        "weight16Bits": [],
+        "weight8Bits": []
+      },
+      "saveInfo": {
+        "loadPath": "",
+        "savePath": ""
+      },
+      "transformer": {
+        "activation": {
+          "ffn": {
+            "down": 16,
+            "gate": 16,
+            "up": 16
+          },
+          "head": 8,
+          "key": 8,
+          "output": 16,
+          "query": 8,
+          "router": 8,
+          "value": 8
+        },
+        "mixedPrecision": {
+          "activation": {
+            "apply": false,
+            "importanceThreshold": -1.0,
+            "ratio16Bit": 0.45,
+            "searchRange": -1
+          },
+          "weight": {
+            "apply": false,
+            "bit2": 0.0,
+            "bit4": 0.0,
+            "bit8": 1.0,
+            "importanceThreshold_high": -1.0,
+            "importanceThreshold_low": -1.0,
+            "prune": 0.0,
+            "typeWise": true
+          }
+        },
+        "weight": {
+          "ffn": {
+            "down": 8,
+            "gate": 8,
+            "up": 8
+          },
+          "head": 8,
+          "key": 8,
+          "output": 8,
+          "query": 8,
+          "router": 8,
+          "value": 8
+        }
+      }
+    },
+    "calibration": {
+      "act16ScaleMin": 1.953125e-06,
+      "actScaleMin": 0.0005,
+      "fastDist": {
+        "kernelSize": 9,
+        "sizeCali": 100,
+        "stackSize": 32768
+      },
+      "groupLut": {
+        "coverFloor": 0.85,
+        "droEps": 0.0,
+        "irlsIter": 3
+      },
+      "histogram": {
+        "bufferSize": -1,
+        "minBinWidth": 1e-06,
+        "numBins": 256,
+        "numSamples": 128,
+        "numSearch": 128,
+        "percentile": 0.9999,
+        "searchPercentileMax": 1.0,
+        "searchPercentileMin": 0.9999,
+        "searchType": 0,
+        "searchTypeList": [
+          "Percentile",
+          "MSE",
+          "KL"
+        ],
+        "useGPU": true
+      },
+      "layerOverrides": {
+        "actScaleMin": {},
+        "method": {},
+        "percentile": {}
+      },
+      "maxCalibDataSize": -1,
+      "maxPercentile": {
+        "maxEach": 128,
+        "maxTotal": 65536,
+        "perChDivisor": 16,
+        "percentile": 0.9999586328492696,
+        "topKRatio": 0.012649668734447
+      },
+      "maxSampleSizeForQuantScheme": 16,
+      "method": 3,
+      "methodList": [
+        "WChALayer",
+        "WChAMulti",
+        "WChALayerZeropoint",
+        "WChAMultiZeropoint"
+      ],
+      "minClipRatio": -1.0,
+      "mode": 1,
+      "modeList": [
+        "Max",
+        "MaxPercentile",
+        "Histogram"
+      ],
+      "output": 0,
+      "outputList": [
+        "Layer",
+        "Ch",
+        "Sigmoid"
+      ],
+      "statistics": {
+        "apply": false,
+        "loadPath": "",
+        "percentileIndex": 0,
+        "percentiles": [
+          0.9999,
+          0.999,
+          0.99,
+          0.9
+        ],
+        "savePath": ""
+      },
+      "weight16ScaleMin": 3.90625e-09,
+      "weightScaleMin": 1e-06
+    }
+  },
+  "runtimeOptions": {
+    "version": "0.0.0"
+  },
+  "saveSample": {
+    "apply": false,
+    "batchSeqLens": [],
+    "batchSize": 1,
+    "dtype": "float",
+    "mode": "infer",
+    "saveFolder": "sampleInout"
+  },
+  "splitBlocks": [],
+  "splitParts": 0,
+  "trace": false,
+  "uint8Input": {
+    "apply": false,
+    "divisionFactor": 255.0,
+    "inputs": []
+  },
+  "useRandomCalib": false
+}

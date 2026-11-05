@@ -1,0 +1,23 @@
+{
+  "dataset": "widerface",
+  "expected_sample_count": 61,
+  "layout": {
+    "adapter": "flat-directory.v1",
+    "classes": null,
+    "image_suffixes": [
+      ".jpeg",
+      ".jpg",
+      ".png"
+    ]
+  },
+  "profile": "prepared-calibration-61.v1",
+  "selection": {
+    "adapter": "seeded-sample.v1",
+    "sample_size": 61,
+    "seed": 0
+  },
+  "source": {
+    "description": "The prepared WIDER FACE calib/ directory containing one image from each of 61 categories (run the Dataset prepare script with its defaults first).",
+    "redistributable": false
+  }
+}

@@ -1,0 +1,17 @@
+# dukemtmc-reid benchmark definition: labels, layout, and download sources.
+name: dukemtmc-reid
+tasks:
+- person_reid
+calib: calib
+val: eval
+cameras: 8
+splits:
+  query: 2228
+  bounding_box_test: 17661
+  bounding_box_train: 16522
+download:
+  archive: null
+  mirrors:
+    kaggle: https://www.kaggle.com/datasets/igorkrashenyi/dukemtmc-reid
+    huggingface: https://huggingface.co/datasets/e8035669/reid-datasets/blob/main/DukeMTMC-reID.zip
+  sha256: 932ae18937b6a77bc59846d4fb00da4ee02cdda93329ca0537ad899a569e3505

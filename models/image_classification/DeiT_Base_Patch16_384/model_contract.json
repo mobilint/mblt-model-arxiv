@@ -1,0 +1,86 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "imagenet",
+    "dataset_code": "../../../datasets/imagenet",
+    "legacy": true,
+    "onnx": {
+      "primary": {
+        "top1_accuracy": 0.83106
+      },
+      "sample_count": 50000,
+      "secondary": {
+        "top5_accuracy": 0.96374
+      }
+    },
+    "primary": {
+      "top1_accuracy": 0.83106
+    },
+    "recorded_with": "mobilint/qbcompiler:1.2-cuda12.8.1-ubuntu22.04",
+    "sample_count": 50000,
+    "secondary": {
+      "top5_accuracy": 0.96348
+    },
+    "task": "image_classification"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "deit_base_patch16_384"
+  },
+  "inference": {
+    "params": {
+      "topk": 5
+    }
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      384,
+      384
+    ]
+  },
+  "model": "DeiT_Base_Patch16_384",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "class-logits",
+      "shape": [
+        1,
+        1000
+      ]
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "crop": [
+        384,
+        384
+      ],
+      "interpolation": "bicubic",
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "resize_shorter_side": 384,
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    }
+  },
+  "task": "image_classification"
+}

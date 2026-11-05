@@ -1,0 +1,51 @@
+"""Export the recorded timm model to ONNX."""
+
+from __future__ import annotations
+
+import inspect
+from pathlib import Path
+from typing import Any
+
+from package_common import PackageError, import_optional
+
+
+def _load_model(weights: str, declared: str) -> Any:
+    timm = import_optional("timm", "install the packages in requirements.txt")
+    try:
+        return timm.create_model(
+            declared,
+            pretrained=weights == declared,
+            exportable=True,
+            **({} if weights == declared else {"checkpoint_path": weights}),
+        )
+    except Exception as error:
+        raise PackageError(
+            f"could not obtain the checkpoint for {declared}: {error}. Provide network "
+            "access, a populated checkpoint cache, or pass --weights <local checkpoint>"
+        ) from error
+
+
+def export_onnx(
+    customer_contract: dict[str, Any], *, weights: str, output: Path, opset: int
+) -> None:
+    torch = import_optional("torch", "install the packages in requirements.txt")
+    model = _load_model(weights, customer_contract["export"]["weights"]).cpu().eval()
+    _, channels, height, width = customer_contract["input"]["shape"]
+    example = torch.zeros(1, channels, height, width, dtype=torch.float32)
+    input_name = customer_contract["input"]["name"]
+    output_names = [item["name"] for item in customer_contract["outputs"]]
+    dynamic_axes = {input_name: {0: "batch"}}
+    dynamic_axes.update({name: {0: "batch"} for name in output_names})
+    export_kwargs: dict[str, Any] = {}
+    if "dynamo" in inspect.signature(torch.onnx.export).parameters:
+        export_kwargs["dynamo"] = False
+    torch.onnx.export(
+        model,
+        (example,),
+        str(output),
+        input_names=[input_name],
+        output_names=output_names,
+        dynamic_axes=dynamic_axes,
+        opset_version=opset,
+        **export_kwargs,
+    )

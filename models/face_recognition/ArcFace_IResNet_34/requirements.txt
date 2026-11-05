@@ -1,0 +1,10 @@
+# Public dependencies. qbcompiler and qbruntime are supplied with the Mobilint SDK.
+numpy
+numpy<2
+onnx
+onnx==1.17.0
+onnxruntime
+onnxruntime==1.20.1
+onnxsim==0.4.36
+Pillow
+torch==2.7.1

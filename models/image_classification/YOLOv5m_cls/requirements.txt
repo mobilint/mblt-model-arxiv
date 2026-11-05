@@ -1,0 +1,16 @@
+# Public dependencies. qbcompiler and qbruntime are supplied with the Mobilint SDK.
+matplotlib
+numpy
+onnx
+onnxruntime
+pandas
+Pillow
+PyYAML
+requests
+scipy
+seaborn
+thop
+torch
+torchvision
+tqdm
+ultralytics

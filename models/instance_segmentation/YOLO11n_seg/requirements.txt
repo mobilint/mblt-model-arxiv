@@ -1,0 +1,8 @@
+# Public dependencies. qbcompiler and qbruntime are supplied with the Mobilint SDK.
+numpy
+onnx
+onnxruntime
+opencv-python-headless
+torch
+torchvision
+ultralytics

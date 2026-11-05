@@ -1,0 +1,104 @@
+{
+  "compile": {
+    "config_version": "1.0.0",
+    "target_device": "aries-rb"
+  },
+  "evaluation": {
+    "dataset": "coco",
+    "dataset_code": "../../../datasets/coco",
+    "legacy": true,
+    "onnx": {
+      "primary": {
+        "map50_95": 0.48924
+      },
+      "sample_count": 5000,
+      "secondary": {
+        "map50": 0.67006
+      }
+    },
+    "primary": {
+      "map50_95": 0.48056
+    },
+    "recorded_with": "mobilint/qbcompiler:1.2-cuda12.8.1-ubuntu22.04",
+    "sample_count": 5000,
+    "secondary": {
+      "map50": 0.66349
+    },
+    "task": "object_detection"
+  },
+  "export": {
+    "opset": 17,
+    "weights": "yolov5l.pt"
+  },
+  "inference": {
+    "params": {
+      "anchors": [
+        [
+          10,
+          13,
+          16,
+          30,
+          33,
+          23
+        ],
+        [
+          30,
+          61,
+          62,
+          45,
+          59,
+          119
+        ],
+        [
+          116,
+          90,
+          156,
+          198,
+          373,
+          326
+        ]
+      ],
+      "conf_thres": 0.001,
+      "iou_thres": 0.65,
+      "max_det": 300,
+      "n_classes": 80,
+      "nmsfree": false,
+      "reg_max": 1
+    }
+  },
+  "input": {
+    "dtype": "float32",
+    "dynamic_axes": {
+      "input": {
+        "0": "batch"
+      }
+    },
+    "layout": "NCHW",
+    "name": "input",
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ]
+  },
+  "model": "YOLOv5l",
+  "outputs": [
+    {
+      "name": "output0",
+      "semantics": "yolo-detection-heads",
+      "shape": null
+    }
+  ],
+  "preprocessing": {
+    "params": {
+      "pad_value": 114,
+      "scale": 255,
+      "size": [
+        640,
+        640
+      ]
+    }
+  },
+  "task": "object_detection"
+}
